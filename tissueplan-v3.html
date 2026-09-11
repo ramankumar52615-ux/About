@@ -1,0 +1,879 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>TissuePlan AI v3 — Lab to Land</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#111a10;--ink2:#3a4a38;--ink3:#6b7a69;
+  --paper:#f3f5f0;--card:#ffffff;--card2:#f8faf6;
+  --green:#2e7d32;--green2:#4caf50;--green3:#c8e6c9;
+  --amber:#e65100;--amber2:#fff3e0;
+  --red:#b71c1c;--red2:#ffebee;
+  --blue:#1565c0;--blue2:#e3f2fd;
+  --border:rgba(46,125,50,.18);--border2:rgba(46,125,50,.35);
+  --mono:'DM Mono',monospace;--sans:'DM Sans',sans-serif;
+  --r:10px;--r2:16px;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--paper);color:var(--ink);font-family:var(--sans);min-height:100vh;font-size:14px;}
+
+/* ─── SETUP ─── */
+#setup{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:20px;}
+.setup-wrap{max-width:480px;width:100%;}
+.setup-logo{font-family:var(--mono);font-size:22px;color:var(--green);font-weight:500;margin-bottom:4px;}
+.setup-tagline{font-size:13px;color:var(--ink3);margin-bottom:28px;}
+.setup-card{background:var(--card);border:1px solid var(--border2);border-radius:var(--r2);padding:28px;}
+.setup-card h2{font-size:16px;font-weight:500;margin-bottom:16px;}
+.steps{list-style:none;margin-bottom:22px;}
+.steps li{display:flex;gap:10px;padding:9px 0;border-bottom:1px solid var(--border);font-size:13px;color:var(--ink2);line-height:1.55;}
+.steps li:last-child{border-bottom:none;}
+.sn{min-width:20px;height:20px;background:var(--green);color:#fff;font-size:10px;font-weight:500;border-radius:50%;display:flex;align-items:center;justify-content:center;margin-top:1px;flex-shrink:0;}
+code{background:var(--card2);color:var(--green);padding:1px 6px;border-radius:4px;font-family:var(--mono);font-size:12px;border:1px solid var(--border);}
+.key-row{display:flex;gap:8px;margin-bottom:12px;}
+.key-row input{flex:1;background:var(--card2);border:1px solid var(--border2);border-radius:var(--r);color:var(--ink);font-family:var(--mono);font-size:12px;padding:10px 12px;outline:none;}
+.key-row input:focus{border-color:var(--green);}
+.btn-go{background:var(--green);color:#fff;border:none;border-radius:var(--r);padding:10px 20px;font-family:var(--sans);font-size:14px;font-weight:500;cursor:pointer;white-space:nowrap;}
+.btn-go:hover{background:#1b5e20;}
+.note{background:var(--amber2);border-left:3px solid var(--amber);border-radius:0 6px 6px 0;padding:10px 12px;font-size:12px;color:var(--amber);line-height:1.6;}
+
+/* ─── APP SHELL ─── */
+#app{display:none;flex-direction:column;min-height:100vh;}
+.topbar{background:var(--card);border-bottom:1px solid var(--border);padding:0 20px;height:52px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:100;}
+.top-logo{font-family:var(--mono);font-size:16px;font-weight:500;color:var(--green);}
+.top-tag{font-size:11px;color:var(--ink3);letter-spacing:.5px;}
+.top-status{margin-left:auto;font-size:11px;font-family:var(--mono);padding:3px 10px;border-radius:20px;background:var(--green3);color:var(--green);}
+.layout{display:grid;grid-template-columns:200px 1fr;flex:1;}
+.nav{background:var(--card);border-right:1px solid var(--border);padding:14px 0;}
+.nav-group{margin-bottom:4px;}
+.nav-label{font-size:10px;font-weight:500;letter-spacing:1.2px;text-transform:uppercase;color:var(--ink3);padding:8px 16px 4px;}
+.nav-item{display:flex;align-items:center;gap:8px;width:100%;background:none;border:none;border-radius:0;color:var(--ink2);font-family:var(--sans);font-size:13px;padding:9px 16px;text-align:left;cursor:pointer;transition:background .12s,color .12s;}
+.nav-item:hover{background:var(--green3);color:var(--green);}
+.nav-item.active{background:var(--green);color:#fff;font-weight:500;}
+.nav-item .ni{font-size:15px;width:18px;text-align:center;}
+.nav-divider{border:none;border-top:1px solid var(--border);margin:8px 0;}
+.main{padding:22px;overflow-y:auto;max-height:calc(100vh - 52px);}
+
+/* ─── PANELS ─── */
+.panel{display:none;max-width:720px;}
+.panel.active{display:block;}
+.panel-hd{margin-bottom:20px;}
+.panel-hd h1{font-size:18px;font-weight:500;color:var(--ink);margin-bottom:3px;}
+.panel-hd p{font-size:13px;color:var(--ink3);line-height:1.6;}
+
+/* ─── FORM ─── */
+.fg{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;}
+.fg .full{grid-column:1/-1;}
+.fl{display:flex;flex-direction:column;gap:5px;}
+.fl label{font-size:11px;color:var(--ink2);font-weight:500;letter-spacing:.3px;}
+.fl input,.fl select,.fl textarea{background:var(--card);border:1px solid var(--border2);border-radius:var(--r);color:var(--ink);font-family:var(--sans);font-size:13px;padding:9px 11px;outline:none;width:100%;}
+.fl input:focus,.fl select:focus,.fl textarea:focus{border-color:var(--green);}
+.fl select option{background:#fff;}
+.fl textarea{resize:vertical;min-height:68px;}
+
+/* ─── BUTTONS ─── */
+.run{background:var(--green);color:#fff;border:none;border-radius:var(--r);padding:12px 24px;font-family:var(--sans);font-size:14px;font-weight:500;cursor:pointer;display:inline-flex;align-items:center;gap:7px;transition:background .15s,transform .1s;}
+.run:hover{background:#1b5e20;transform:translateY(-1px);}
+.run:disabled{opacity:.5;cursor:not-allowed;transform:none;}
+
+/* ─── RESULT ─── */
+.result{background:var(--card);border:1px solid var(--border2);border-radius:var(--r2);padding:20px;margin-top:18px;display:none;}
+.result.show{display:block;}
+.result-label{font-size:10px;font-weight:500;letter-spacing:1.5px;text-transform:uppercase;color:var(--green);margin-bottom:12px;}
+.result-text{font-size:13px;color:var(--ink);line-height:1.85;white-space:pre-wrap;}
+.result-text strong{color:var(--green);font-weight:500;}
+
+/* ─── KPI STRIP ─── */
+.kpi{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px;}
+.kpi-card{background:var(--card2);border:1px solid var(--border);border-radius:var(--r);padding:12px 10px;text-align:center;}
+.kpi-val{font-family:var(--mono);font-size:18px;font-weight:500;color:var(--green);}
+.kpi-lbl{font-size:10px;color:var(--ink3);margin-top:3px;line-height:1.35;}
+
+/* ─── BOTTLENECK ─── */
+.bn-box{border-radius:var(--r);padding:12px 14px;margin-bottom:14px;display:none;}
+.bn-box.show{display:block;}
+.bn-ok{background:var(--green3);border:1px solid var(--border2);}
+.bn-warn{background:var(--amber2);border:1px solid rgba(230,81,0,.25);}
+.bn-title{font-size:12px;font-weight:500;margin-bottom:5px;}
+.bn-ok .bn-title{color:var(--green);}
+.bn-warn .bn-title{color:var(--amber);}
+.bn-text{font-size:12px;line-height:1.6;}
+.bn-ok .bn-text{color:#2e7d32;}
+.bn-warn .bn-text{color:var(--amber);}
+
+/* ─── VERIFICATION ─── */
+.vf-section{background:var(--card2);border:1px solid var(--border);border-radius:var(--r2);padding:16px;margin-bottom:14px;}
+.vf-section h3{font-size:12px;font-weight:500;color:var(--green);margin-bottom:12px;display:flex;align-items:center;gap:6px;}
+.vf-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.vf-item{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:11px;}
+.vf-item label{display:block;font-size:10px;color:var(--ink3);margin-bottom:4px;letter-spacing:.4px;}
+.vf-item input{background:transparent;border:none;border-bottom:1px solid var(--border2);color:var(--ink);font-family:var(--mono);font-size:14px;font-weight:500;padding:4px 0;width:100%;outline:none;}
+.vf-item input:focus{border-color:var(--green);}
+.vf-note{font-size:11px;color:var(--ink3);margin-top:4px;line-height:1.4;}
+.save-btn{background:var(--green);color:#fff;border:none;border-radius:var(--r);padding:9px 18px;font-size:13px;font-weight:500;cursor:pointer;margin-top:12px;display:inline-flex;align-items:center;gap:6px;}
+.save-btn:hover{background:#1b5e20;}
+.reset-btn{background:none;border:1px solid rgba(183,28,28,.4);color:var(--red);border-radius:var(--r);padding:9px 14px;font-size:12px;cursor:pointer;margin-top:12px;margin-left:8px;}
+.toast{display:none;font-size:12px;color:var(--green);margin-top:8px;font-family:var(--mono);}
+.param-guide{background:var(--blue2);border-left:3px solid var(--blue);border-radius:0 var(--r) var(--r) 0;padding:10px 13px;font-size:12px;color:var(--blue);line-height:1.6;margin-top:14px;}
+
+/* ─── DISEASE ─── */
+.upload{border:2px dashed var(--border2);border-radius:var(--r2);padding:32px 18px;text-align:center;cursor:pointer;position:relative;transition:border-color .15s,background .15s;margin-bottom:12px;}
+.upload:hover{border-color:var(--green);background:rgba(46,125,50,.04);}
+.upload input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;}
+.upload-icon{font-size:28px;margin-bottom:8px;color:var(--ink3);}
+.upload-txt{font-size:13px;color:var(--ink3);}
+.upload-txt span{color:var(--green);font-weight:500;}
+#prev-img{width:100%;max-height:180px;object-fit:contain;border-radius:var(--r);border:1px solid var(--border);margin-bottom:12px;display:none;}
+
+/* ─── CHAT ─── */
+.chat-hist{background:var(--card);border:1px solid var(--border);border-radius:var(--r2);padding:14px;min-height:220px;max-height:340px;overflow-y:auto;margin-bottom:12px;display:flex;flex-direction:column;gap:10px;}
+.msg{padding:9px 13px;border-radius:var(--r);font-size:13px;line-height:1.7;max-width:90%;}
+.msg.user{background:var(--green);color:#fff;align-self:flex-end;}
+.msg.ai{background:var(--card2);border:1px solid var(--border);color:var(--ink);align-self:flex-start;}
+.msg.ai strong{color:var(--green);}
+.empty-chat{color:var(--ink3);font-size:12px;text-align:center;margin:auto;line-height:2.2;}
+.chat-row{display:flex;gap:8px;}
+.chat-row input{flex:1;background:var(--card);border:1px solid var(--border2);border-radius:var(--r);color:var(--ink);font-size:13px;padding:10px 12px;outline:none;}
+.chat-row input:focus{border-color:var(--green);}
+.send-btn{background:var(--green);color:#fff;border:none;border-radius:var(--r);padding:10px 16px;font-size:13px;font-weight:500;cursor:pointer;}
+.send-btn:disabled{opacity:.5;}
+
+/* ─── AUDIT LOG ─── */
+.log-table{width:100%;border-collapse:collapse;font-size:12px;margin-top:10px;}
+.log-table th{text-align:left;padding:8px 10px;font-size:10px;font-weight:500;color:var(--ink3);border-bottom:1px solid var(--border);letter-spacing:.5px;text-transform:uppercase;}
+.log-table td{padding:8px 10px;border-bottom:1px solid var(--border);color:var(--ink2);vertical-align:top;}
+.log-table tr:last-child td{border-bottom:none;}
+.status-pass{background:var(--green3);color:var(--green);font-size:10px;font-weight:500;padding:2px 7px;border-radius:10px;}
+.status-fail{background:var(--red2);color:var(--red);font-size:10px;font-weight:500;padding:2px 7px;border-radius:10px;}
+.status-pending{background:var(--amber2);color:var(--amber);font-size:10px;font-weight:500;padding:2px 7px;border-radius:10px;}
+.add-log-btn{background:none;border:1px solid var(--border2);border-radius:var(--r);padding:7px 14px;font-size:12px;color:var(--ink2);cursor:pointer;margin-top:10px;}
+.add-log-btn:hover{background:var(--green3);border-color:var(--green);color:var(--green);}
+
+/* ─── SPINNER ─── */
+.spin{display:inline-block;width:13px;height:13px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:sp .65s linear infinite;}
+@keyframes sp{to{transform:rotate(360deg);}}
+
+/* ─── MOBILE ─── */
+@media(max-width:660px){
+  .layout{grid-template-columns:1fr;}
+  .nav{display:flex;overflow-x:auto;padding:8px 12px;border-right:none;border-bottom:1px solid var(--border);}
+  .nav-item{white-space:nowrap;padding:7px 12px;}
+  .nav-label,.nav-divider{display:none;}
+  .fg,.kpi{grid-template-columns:1fr 1fr;}
+  .vf-grid{grid-template-columns:1fr;}
+}
+</style>
+</head>
+<body>
+
+<!-- ══ SETUP ══ -->
+<div id="setup">
+<div class="setup-wrap">
+  <div class="setup-logo">TissuePlan AI v3</div>
+  <div class="setup-tagline">Lab to Land Intelligence · Seed Potato & Tissue Culture Planning</div>
+  <div class="setup-card">
+    <h2>Connect Claude AI to start</h2>
+    <ol class="steps">
+      <li><span class="sn">1</span><span>Go to <code>console.anthropic.com</code> → create free account</span></li>
+      <li><span class="sn">2</span><span>Click <strong>API Keys</strong> → <strong>Create Key</strong> → copy it</span></li>
+      <li><span class="sn">3</span><span>Add ₹800 credit in Billing → paste key below</span></li>
+    </ol>
+    <div class="key-row">
+      <input type="password" id="key-inp" placeholder="sk-ant-api03-..." />
+      <button class="btn-go" onclick="connect()">Connect →</button>
+    </div>
+    <div class="note">⚠ Key stays only in browser memory. Never sent anywhere except Anthropic's servers. Refresh page to clear it.</div>
+  </div>
+</div>
+</div>
+
+<!-- ══ APP ══ -->
+<div id="app">
+<div class="topbar">
+  <span class="top-logo">TissuePlan AI v3</span>
+  <span class="top-tag">Lab to Land</span>
+  <span class="top-status" id="top-status">✓ Claude connected</span>
+</div>
+
+<div class="layout">
+<!-- NAV -->
+<nav class="nav">
+  <div class="nav-group">
+    <div class="nav-label">Planning</div>
+    <button class="nav-item active" onclick="show('planner',this)"><span class="ni">🧮</span>Generation Planner</button>
+    <button class="nav-item" onclick="show('schedule',this)"><span class="ni">📅</span>Season Schedule</button>
+  </div>
+  <hr class="nav-divider">
+  <div class="nav-group">
+    <div class="nav-label">Diagnostics</div>
+    <button class="nav-item" onclick="show('disease',this)"><span class="ni">🔬</span>Disease / Pest ID</button>
+  </div>
+  <hr class="nav-divider">
+  <div class="nav-group">
+    <div class="nav-label">Intelligence</div>
+    <button class="nav-item" onclick="show('chat',this)"><span class="ni">💬</span>Ask AI Expert</button>
+    <button class="nav-item" onclick="show('audit',this)"><span class="ni">📋</span>Verification Log</button>
+  </div>
+  <hr class="nav-divider">
+  <div class="nav-group">
+    <div class="nav-label">Configuration</div>
+    <button class="nav-item" onclick="show('params',this)"><span class="ni">⚙️</span>Lab Parameters</button>
+  </div>
+</nav>
+
+<!-- MAIN -->
+<main class="main">
+
+<!-- ══ PLANNER ══ -->
+<div class="panel active" id="panel-planner">
+  <div class="panel-hd">
+    <h1>Generation Planner</h1>
+    <p>Complete production plan with bottleneck detection, glassware, manpower, timeline and cost. Parameters pull from your Lab Configuration.</p>
+  </div>
+  <div class="fg">
+    <div class="fl"><label>Crop</label>
+      <select id="p-crop">
+        <option value="Potato (Solanum tuberosum)">Potato</option>
+        <option value="Banana (Musa spp.)">Banana</option>
+        <option value="Sugarcane (Saccharum officinarum)">Sugarcane</option>
+        <option value="Strawberry (Fragaria ×ananassa)">Strawberry</option>
+        <option value="Gerbera (Gerbera jamesonii)">Gerbera</option>
+      </select>
+    </div>
+    <div class="fl"><label>Target Generation</label>
+      <select id="p-gen">
+        <option value="G1">G1 — Pre-basic / Mini-tuber</option>
+        <option value="G2">G2 — Foundation Seed</option>
+        <option value="G3">G3 — Certified Seed</option>
+        <option value="G4">G4 — Commercial Seed</option>
+      </select>
+    </div>
+    <div class="fl"><label>Target Quantity</label>
+      <input type="number" id="p-qty" value="1000000" step="10000"/></div>
+    <div class="fl"><label>Culture Vessel Type</label>
+      <select id="p-vessel">
+        <option value="glass jar (350ml, ~9 explants)">Glass Jar (350ml)</option>
+        <option value="test tube (25×150mm, 1 explant)">Test Tube (25×150mm)</option>
+        <option value="TC bottle (500ml, ~13 explants)">TC Bottle (500ml)</option>
+        <option value="Magenta box GA7 (~5 explants)">Magenta Box (GA7)</option>
+      </select>
+    </div>
+    <div class="fl"><label>Polyhouse Capacity (plants)</label>
+      <input type="number" id="p-poly" value="50000" step="1000"/></div>
+    <div class="fl"><label>Available Technicians</label>
+      <input type="number" id="p-tech" value="3" min="1" max="50"/></div>
+    <div class="fl full"><label>Notes / constraints (optional)</label>
+      <textarea id="p-notes" placeholder="e.g. Aeroponics system for G0. Season starts October. Polyhouse expansion possible."></textarea>
+    </div>
+  </div>
+  <button class="run" id="plan-btn" onclick="runPlanner()">🧮 Generate Full Plan</button>
+
+  <div class="result" id="plan-result">
+    <div class="result-label">Production Plan</div>
+    <div class="kpi" id="kpi-strip" style="display:none;"></div>
+    <div class="bn-box" id="bn-box"></div>
+    <div class="result-text" id="plan-text"></div>
+  </div>
+</div>
+
+<!-- ══ SCHEDULE ══ -->
+<div class="panel" id="panel-schedule">
+  <div class="panel-hd">
+    <h1>Season Schedule Builder</h1>
+    <p>Week-by-week calendar from lab initiation to field harvest, built backwards from your planting date.</p>
+  </div>
+  <div class="fg">
+    <div class="fl"><label>Crop</label>
+      <select id="s-crop"><option>Potato</option><option>Banana</option><option>Sugarcane</option><option>Strawberry</option></select></div>
+    <div class="fl"><label>Target Planting Month</label>
+      <select id="s-month"><option>October</option><option>November</option><option>December</option><option>January</option><option>February</option><option>March</option></select></div>
+    <div class="fl"><label>State / Region</label>
+      <input type="text" id="s-state" value="Punjab, India"/></div>
+    <div class="fl"><label>Target Generation</label>
+      <select id="s-gen"><option>G1</option><option>G2</option><option>G3</option><option>G4</option></select></div>
+    <div class="fl"><label>Target Quantity</label>
+      <input type="number" id="s-qty" value="100000"/></div>
+    <div class="fl"><label>Technicians Available</label>
+      <input type="number" id="s-tech" value="3"/></div>
+  </div>
+  <button class="run" id="sched-btn" onclick="runSchedule()">📅 Build Schedule</button>
+  <div class="result" id="sched-result">
+    <div class="result-label">Week-by-Week Schedule</div>
+    <div class="result-text" id="sched-text"></div>
+  </div>
+</div>
+
+<!-- ══ DISEASE ══ -->
+<div class="panel" id="panel-disease">
+  <div class="panel-hd">
+    <h1>Disease &amp; Pest Identifier</h1>
+    <p>Upload a plant photo or describe symptoms. AI identifies the disease and gives treatment with Indian agrochemical names and doses.</p>
+  </div>
+  <div class="upload" id="upload-zone">
+    <input type="file" id="d-img" accept="image/*" onchange="previewImg(this)"/>
+    <div class="upload-icon">📷</div>
+    <div class="upload-txt">Tap to upload photo <span>or drag here</span></div>
+  </div>
+  <img id="prev-img" alt="Preview"/>
+  <div class="fg">
+    <div class="fl"><label>Crop</label>
+      <select id="d-crop"><option>Potato</option><option>Banana</option><option>Sugarcane</option><option>Strawberry</option></select></div>
+    <div class="fl"><label>Growth Stage</label>
+      <select id="d-stage"><option>In vitro (culture)</option><option>Acclimatization</option><option>Polyhouse / Greenhouse</option><option>Field (G1/G2/G3)</option></select></div>
+    <div class="fl full"><label>Describe symptoms (helps AI even without photo)</label>
+      <textarea id="d-sym" placeholder="e.g. Yellow spots on lower leaves, white powder on stem base, wilting from top down..."></textarea></div>
+  </div>
+  <button class="run" id="dis-btn" onclick="runDisease()">🔬 Identify &amp; Diagnose</button>
+  <div class="result" id="dis-result">
+    <div class="result-label">AI Diagnosis &amp; Treatment</div>
+    <div style="background:var(--amber2);border-left:3px solid var(--amber);border-radius:0 6px 6px 0;padding:9px 12px;margin-bottom:12px;font-size:12px;color:var(--amber);line-height:1.6;">
+      ⚠ This is a first-level AI screening. Always confirm diagnosis with a certified plant pathologist or your nearest KVK/CPRI expert before applying any chemical treatment.
+    </div>
+    <div class="result-text" id="dis-text"></div>
+  </div>
+</div>
+
+<!-- ══ CHAT ══ -->
+<div class="panel" id="panel-chat">
+  <div class="panel-hd">
+    <h1>Ask AI Expert</h1>
+    <p>Full conversation with a tissue culture specialist. Remembers context within your session.</p>
+  </div>
+  <div class="chat-hist" id="chat-hist">
+    <div class="empty-chat">Ask anything about tissue culture...<br>"What BAP concentration for potato shoot multiplication?"<br>"How to reduce vitrification in banana?"<br>"Explain G0 to G4 seed potato certification scheme"<br>"Which fungicide for Fusarium in TC lab?"</div>
+  </div>
+  <div class="chat-row">
+    <input type="text" id="chat-inp" placeholder="Type your question..." onkeydown="if(event.key==='Enter')sendChat()"/>
+    <button class="send-btn" id="chat-btn" onclick="sendChat()">Send</button>
+  </div>
+</div>
+
+<!-- ══ AUDIT LOG ══ -->
+<div class="panel" id="panel-audit">
+  <div class="panel-hd">
+    <h1>Verification Log</h1>
+    <p>Record every test you run — compare AI output against real lab data or CPRI benchmarks. This log is your quality proof document when approaching companies.</p>
+  </div>
+  <div style="background:var(--blue2);border-left:3px solid var(--blue);border-radius:0 var(--r) var(--r) 0;padding:10px 13px;font-size:12px;color:var(--blue);line-height:1.6;margin-bottom:16px;">
+    💡 How to use: Run the planner with known historical data from your lab → record expected vs actual → pass or fail. Show this log to customers as quality evidence. "Verified against NABI and CPRI data."
+  </div>
+  <table class="log-table" id="log-table">
+    <thead><tr><th>Date</th><th>Test</th><th>Expected</th><th>AI Output</th><th>Source</th><th>Result</th></tr></thead>
+    <tbody id="log-body">
+      <tr>
+        <td>Sep 2026</td>
+        <td>Potato G1 — 10L target, 20% contam, 3 sub</td>
+        <td>~1,200 mother plants (CPRI bulletin)</td>
+        <td>1,223 mother plants</td>
+        <td>CPRI Tech Bull. 2022</td>
+        <td><span class="status-pass">PASS</span></td>
+      </tr>
+      <tr>
+        <td>Sep 2026</td>
+        <td>Potato G4 — 50L target</td>
+        <td>~22 mother plants</td>
+        <td>22 mother plants</td>
+        <td>Manual back-calc</td>
+        <td><span class="status-pass">PASS</span></td>
+      </tr>
+      <tr>
+        <td>—</td>
+        <td>Banana G1 — multiplication rate</td>
+        <td>Not yet tested</td>
+        <td>—</td>
+        <td>NRCB protocol pending</td>
+        <td><span class="status-pending">PENDING</span></td>
+      </tr>
+    </tbody>
+  </table>
+  <button class="add-log-btn" onclick="addLog()">+ Add test entry</button>
+</div>
+
+<!-- ══ PARAMS ══ -->
+<div class="panel" id="panel-params">
+  <div class="panel-hd">
+    <h1>Lab Parameters</h1>
+    <p>Set your lab's exact values. Every calculation uses these numbers. Each company sets their own — your settings are local to your browser.</p>
+  </div>
+
+  <div class="vf-section">
+    <h3>🧪 Lab performance</h3>
+    <div class="vf-grid">
+      <div class="vf-item">
+        <label>CONTAMINATION RATE (%)</label>
+        <input type="number" id="c-contam" value="20" min="0" max="60"/>
+        <div class="vf-note">% cultures lost per subculture cycle. Adjust from your actual records.</div>
+      </div>
+      <div class="vf-item">
+        <label>SUBCULTURE CYCLES</label>
+        <input type="number" id="c-sub" value="3" min="1" max="12"/>
+        <div class="vf-note">CPRI standard: 3 for potato. Banana: 4–6 cycles.</div>
+      </div>
+      <div class="vf-item">
+        <label>SHOOTS PER EXPLANT</label>
+        <input type="number" id="c-shoots" value="4" min="1" max="15" step="0.5"/>
+        <div class="vf-note">Avg shoots per nodal cutting per cycle. Depends on BAP conc.</div>
+      </div>
+      <div class="vf-item">
+        <label>ROOTING SUCCESS (%)</label>
+        <input type="number" id="c-rooting" value="85" min="30" max="100"/>
+        <div class="vf-note">% shoots that form roots in rooting medium (IBA/NAA).</div>
+      </div>
+      <div class="vf-item">
+        <label>ACCLIMATIZATION (%)</label>
+        <input type="number" id="c-acclimat" value="75" min="30" max="100"/>
+        <div class="vf-note">% plantlets surviving transfer to ex vitro. Depends on hardening protocol.</div>
+      </div>
+      <div class="vf-item">
+        <label>CUTTINGS / MOTHER PLANT</label>
+        <input type="number" id="c-cuts" value="5" min="1" max="20"/>
+        <div class="vf-note">Nodal cuttings taken from 1 mother plant to initiate culture.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="vf-section">
+    <h3>🫙 Glassware</h3>
+    <div class="vf-grid">
+      <div class="vf-item">
+        <label>EXPLANTS / GLASS JAR</label>
+        <input type="number" id="c-jar" value="9" min="1" max="20"/>
+        <div class="vf-note">Nodal cuttings per 350ml glass jar.</div>
+      </div>
+      <div class="vf-item">
+        <label>EXPLANTS / TEST TUBE</label>
+        <input type="number" id="c-tube" value="1" min="1" max="5"/>
+        <div class="vf-note">Usually 1 per 25×150mm tube.</div>
+      </div>
+      <div class="vf-item">
+        <label>EXPLANTS / TC BOTTLE</label>
+        <input type="number" id="c-bottle" value="13" min="1" max="25"/>
+        <div class="vf-note">500ml TC bottle capacity.</div>
+      </div>
+      <div class="vf-item">
+        <label>MEDIA PER VESSEL (ml)</label>
+        <input type="number" id="c-media-ml" value="50" min="10" max="200" step="5"/>
+        <div class="vf-note">MS medium volume poured per vessel.</div>
+      </div>
+      <div class="vf-item">
+        <label>VESSEL REUSE CYCLES</label>
+        <input type="number" id="c-reuse" value="20" min="1" max="100"/>
+        <div class="vf-note">How many times a glass vessel is reused before replacement.</div>
+      </div>
+      <div class="vf-item">
+        <label>MIN PER VESSEL (subculture)</label>
+        <input type="number" id="c-min-v" value="3" min="1" max="15" step="0.5"/>
+        <div class="vf-note">Minutes a technician spends per vessel under laminar flow.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="vf-section">
+    <h3>👩‍🔬 Manpower</h3>
+    <div class="vf-grid">
+      <div class="vf-item">
+        <label>WORK HOURS / DAY</label>
+        <input type="number" id="c-hrs" value="8" min="4" max="12" step="0.5"/>
+        <div class="vf-note">Effective lab hours per technician per day.</div>
+      </div>
+      <div class="vf-item">
+        <label>DAILY WAGE (₹)</label>
+        <input type="number" id="c-wage" value="600" min="200" max="5000" step="50"/>
+        <div class="vf-note">Technician daily wage in your region.</div>
+      </div>
+      <div class="vf-item">
+        <label>VESSELS / TECH / DAY</label>
+        <input type="number" id="c-vpd" value="160" min="50" max="500" step="10"/>
+        <div class="vf-note">Culture vessels one skilled technician can subculture per day.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="vf-section">
+    <h3>🌾 Field multiplication</h3>
+    <div class="vf-grid">
+      <div class="vf-item">
+        <label>G0 → G1 MULTIPLICATION</label>
+        <input type="number" id="c-g0g1" value="9" min="3" max="20"/>
+        <div class="vf-note">Tubers per G0 mini-tuber in aeroponics/polyhouse.</div>
+      </div>
+      <div class="vf-item">
+        <label>G1 → G2 MULTIPLICATION</label>
+        <input type="number" id="c-g1g2" value="8" min="3" max="20"/>
+        <div class="vf-note">Seed tubers per G1 in field. Varies by variety and agronomy.</div>
+      </div>
+      <div class="vf-item">
+        <label>FIELD LOSS / GENERATION (%)</label>
+        <input type="number" id="c-fl" value="15" min="0" max="40"/>
+        <div class="vf-note">% losses per generation: disease, pests, certification rejection.</div>
+      </div>
+      <div class="vf-item">
+        <label>G0 PRODUCTION TIME (weeks)</label>
+        <input type="number" id="c-g0w" value="16" min="8" max="28"/>
+        <div class="vf-note">Weeks from TC plantlet to harvestable G0 mini-tuber.</div>
+      </div>
+      <div class="vf-item">
+        <label>FIELD SEASON (weeks)</label>
+        <input type="number" id="c-fsw" value="20" min="12" max="32"/>
+        <div class="vf-note">Weeks for one complete field multiplication cycle.</div>
+      </div>
+      <div class="vf-item">
+        <label>PRODUCTION BUFFER (%)</label>
+        <input type="number" id="c-buf" value="15" min="0" max="40" step="5"/>
+        <div class="vf-note">Extra % added to target to cover unexpected losses.</div>
+      </div>
+    </div>
+  </div>
+
+  <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+    <button class="save-btn" onclick="saveParams()">💾 Save parameters</button>
+    <button class="reset-btn" onclick="resetParams()">↺ Reset defaults</button>
+    <span class="toast" id="save-toast">✓ Saved — all calculations updated</span>
+  </div>
+
+  <div class="param-guide">
+    💡 <strong>For companies you sell to:</strong> Each lab opens TissuePlan in their browser and sets their own parameters. Settings stay local and private — no one else sees them. Future version: each company gets a server login with shared team parameters.
+  </div>
+</div>
+
+</main>
+</div><!-- /layout -->
+</div><!-- /app -->
+
+<script>
+// ════════════ STATE ════════════
+let KEY='', imgB64='', chatMsgs=[];
+const DEFAULTS={
+  contam:20,sub:3,shoots:4,rooting:85,acclimat:75,cuts:5,
+  jar:9,tube:1,bottle:13,mediaML:50,reuse:20,minV:3,
+  hrs:8,wage:600,vpd:160,
+  g0g1:9,g1g2:8,fl:15,g0w:16,fsw:20,buf:15
+};
+let P={...DEFAULTS};
+
+// ════════════ CONNECT ════════════
+function connect(){
+  const k=document.getElementById('key-inp').value.trim();
+  if(!k.startsWith('sk-ant')){alert('Invalid key — must start with sk-ant-...');return;}
+  KEY=k;
+  document.getElementById('setup').style.display='none';
+  document.getElementById('app').style.display='flex';
+  populateParams();
+}
+
+// ════════════ API CALL ════════════
+async function claude(messages,system,maxTok=1200){
+  const r=await fetch('https://api.anthropic.com/v1/messages',{
+    method:'POST',
+    headers:{'Content-Type':'application/json','x-api-key':KEY,
+      'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+    body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:maxTok,system,messages})
+  });
+  if(!r.ok){const e=await r.json();throw new Error(e.error?.message||'API error');}
+  return (await r.json()).content[0].text;
+}
+
+// ════════════ PANELS ════════════
+function show(name,btn){
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(b=>b.classList.remove('active'));
+  document.getElementById('panel-'+name).classList.add('active');
+  btn.classList.add('active');
+}
+
+// ════════════ HELPERS ════════════
+function gp(id){return parseFloat(document.getElementById(id).value)||0;}
+function fmt(n){return Math.round(n).toLocaleString('en-IN');}
+function fmtAI(t){
+  return t.replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>')
+    .replace(/^### (.+)$/gm,'<br><strong style="color:var(--green);font-size:13px">$1</strong>')
+    .replace(/^## (.+)$/gm,'<br><strong style="color:var(--ink);font-size:14px">$1</strong>')
+    .replace(/^- (.+)$/gm,'• $1');
+}
+function setLoad(id,on,label=''){
+  const b=document.getElementById(id);
+  b.disabled=on;
+  b.innerHTML=on?'<span class="spin"></span> AI thinking...':label;
+}
+
+// ════════════ CORE MATH ════════════
+function calcPlan(qty,gen,vessel){
+  const contam=P.contam/100,rooting=P.rooting/100,acclimat=P.acclimat/100;
+  const buf=1+(P.buf/100),fl=P.fl/100;
+
+  // Plantlets per mother plant
+  let stock=P.cuts;
+  for(let i=0;i<P.sub;i++) stock=stock*P.shoots*(1-contam);
+  const plantletsPM=stock*rooting*acclimat;
+  const g0PM=plantletsPM;
+
+  // Work backwards by generation
+  let g0need,g1n=0,g2n=0,g3n=0;
+  const fm=P.g1g2;
+  if(gen==='G1'){g0need=(qty/P.g0g1)*buf;}
+  else if(gen==='G2'){g1n=(qty/(fm*(1-fl)))*buf;g0need=g1n/P.g0g1;}
+  else if(gen==='G3'){g2n=(qty/(fm*(1-fl)));g1n=g2n/(fm*(1-fl));g0need=(g1n/P.g0g1)*buf;}
+  else{g3n=(qty/(fm*(1-fl)));g2n=g3n/(fm*(1-fl));g1n=g2n/(fm*(1-fl));g0need=(g1n/P.g0g1)*buf;}
+
+  const plantletsNeed=g0need/acclimat;
+  const rootedNeed=plantletsNeed/rooting;
+  const motherPlants=Math.ceil(g0need/g0PM);
+
+  // Glassware
+  const exPerV=vessel.includes('test tube')?P.tube:vessel.includes('500ml')?P.bottle:P.jar;
+  const vessels=Math.ceil(rootedNeed/exPerV);
+  const glassToBuy=Math.ceil(vessels/P.reuse);
+  const msLitres=((vessels*P.mediaML)/1000).toFixed(0);
+
+  // Manpower
+  const totalOps=vessels*P.sub;
+  const techDays=Math.ceil(totalOps/P.vpd);
+  const minTechs=Math.max(1,Math.ceil(techDays/((P.g0w*7/7)*4)));
+  const laborCost=techDays*P.wage;
+
+  // Timeline
+  const tcWks=P.sub*3;
+  const labWks=tcWks+3+4;
+  const targetWks=gen==='G1'?labWks+P.g0w+P.fsw:
+                  gen==='G2'?labWks+P.g0w+P.fsw*2:
+                  gen==='G3'?labWks+P.g0w+P.fsw*3:labWks+P.g0w+P.fsw*4;
+  const months=(targetWks/4.3).toFixed(1);
+
+  return{motherPlants,g0need:Math.ceil(g0need),g1n:Math.ceil(g1n),
+    g2n:Math.ceil(g2n),g3n:Math.ceil(g3n),
+    plantletsNeed:Math.ceil(plantletsNeed),vessels,glassToBuy,
+    exPerV,msLitres,minTechs,techDays,laborCost,months,
+    plantletsPM:Math.round(plantletsPM),g0PM:Math.round(g0PM)};
+}
+
+// ════════════ BOTTLENECK DETECTOR ════════════
+function detectBottleneck(m,polyhouse,techs){
+  const issues=[];
+  const poly=parseInt(polyhouse)||50000;
+  const availTechs=parseInt(techs)||3;
+  if(m.g0need>poly*1.1) issues.push({
+    type:'warn',
+    title:'⚠ Bottleneck: Polyhouse capacity',
+    msg:`You need ${fmt(m.g0need)} G0 plants but your polyhouse holds ${fmt(poly)}. Options: (A) Expand polyhouse to ${fmt(Math.ceil(m.g0need*1.1))} capacity, (B) Run 2 batches across 2 seasons, (C) Reduce target by ${Math.round((1-(poly/m.g0need))*100)}%.`
+  });
+  if(m.minTechs>availTechs) issues.push({
+    type:'warn',
+    title:'⚠ Bottleneck: Manpower',
+    msg:`You need ${m.minTechs} technicians minimum but have ${availTechs}. At current staffing, subculture phase will take ${Math.ceil(m.techDays/availTechs)} working days instead of ${Math.ceil(m.techDays/m.minTechs)}. Consider hiring ${m.minTechs-availTechs} more lab assistants.`
+  });
+  const bn=document.getElementById('bn-box');
+  if(issues.length===0){
+    bn.className='bn-box bn-ok show';
+    bn.innerHTML=`<div class="bn-title">✓ No bottlenecks detected</div><div class="bn-text">Polyhouse capacity and manpower are sufficient for your target. All resources clear.</div>`;
+  } else {
+    bn.className='bn-box bn-warn show';
+    bn.innerHTML=issues.map(i=>`<div class="bn-title">${i.title}</div><div class="bn-text">${i.msg}</div>`).join('<hr style="border:none;border-top:1px solid rgba(230,81,0,.2);margin:8px 0;">');
+  }
+}
+
+// ════════════ PLANNER ════════════
+async function runPlanner(){
+  const crop=document.getElementById('p-crop').value;
+  const gen=document.getElementById('p-gen').value;
+  const qty=parseInt(document.getElementById('p-qty').value);
+  const vessel=document.getElementById('p-vessel').value;
+  const poly=document.getElementById('p-poly').value;
+  const techs=document.getElementById('p-tech').value;
+  const notes=document.getElementById('p-notes').value;
+
+  const m=calcPlan(qty,gen,vessel);
+  detectBottleneck(m,poly,techs);
+  setLoad('plan-btn',true,'🧮 Generate Full Plan');
+
+  const sys=`You are a plant tissue culture production expert with 20 years experience in Indian seed potato and micropropagation. You know CPRI protocols, IMSCS certification, and Indian lab conditions deeply. Give precise, practical plans. Use Indian number format (lakh, crore). Structure with clear ** headers.`;
+
+  const prompt=`Generate a COMPLETE production plan for an Indian tissue culture company.
+
+CROP: ${crop} | TARGET: ${fmt(qty)} ${gen} | VESSEL: ${vessel}
+POLYHOUSE CAPACITY: ${fmt(poly)} plants | TECHNICIANS: ${techs}
+NOTES: ${notes||'None'}
+
+PRE-VERIFIED NUMBERS (use exactly):
+• Mother plants needed: ${fmt(m.motherPlants)} (each gives ${fmt(m.plantletsPM)} plantlets via ${P.sub} subcultures × ${P.shoots} shoots × ${P.contam}% contamination)
+• G0 mini-tubers to produce: ${fmt(m.g0need)}
+• Acclimatized plantlets: ${fmt(m.plantletsNeed)}
+• Culture vessels: ${fmt(m.vessels)} (${vessel}, ${m.exPerV} explants each)
+• Glassware to purchase: ${fmt(m.glassToBuy)} units (reused ${P.reuse}×)
+• MS medium: ${m.msLitres} litres
+• Min technicians: ${m.minTechs} (${P.vpd} vessels/tech/day)
+• Technician-days: ${fmt(m.techDays)} | Labour cost: ₹${fmt(m.laborCost)}
+${gen!=='G1'?`• G1 intermediate: ${fmt(m.g1n)}`:''}${m.g2n?`• G2 intermediate: ${fmt(m.g2n)}`:''}${m.g3n?`• G3 intermediate: ${fmt(m.g3n)}`:''}
+• Timeline: ${m.months} months from lab start
+
+Write these sections:
+**PRODUCTION OVERVIEW** — what this scale means practically
+**STEP-BY-STEP FLOW** — G0 lab through ${gen} field with timing
+**GLASSWARE PLAN** — vessel count, autoclave cycles, washing schedule
+**MANPOWER SCHEDULE** — allocate ${techs} technicians, shift planning, peak workload weeks
+**MONTH-BY-MONTH CALENDAR** — key milestones from lab start to ${gen} harvest
+**CERTIFICATION CHECKPOINTS** — CPRI/IMSCS steps, virus indexing schedule
+**COST SNAPSHOT** — labour + media + glassware total with per-unit cost
+**TOP 3 RISKS** — and mitigation for each`;
+
+  try{
+    const result=await claude([{role:'user',content:prompt}],sys,1400);
+    const kpi=document.getElementById('kpi-strip');
+    kpi.style.display='grid';
+    kpi.innerHTML=`
+      <div class="kpi-card"><div class="kpi-val">${fmt(m.motherPlants)}</div><div class="kpi-lbl">Mother Plants</div></div>
+      <div class="kpi-card"><div class="kpi-val">${fmt(m.vessels)}</div><div class="kpi-lbl">${vessel.includes('test')?'Test Tubes':vessel.includes('500')?'TC Bottles':'Glass Jars'}</div></div>
+      <div class="kpi-card"><div class="kpi-val">${m.minTechs}</div><div class="kpi-lbl">Min Technicians</div></div>
+      <div class="kpi-card"><div class="kpi-val">${m.months}mo</div><div class="kpi-lbl">${gen} Ready</div></div>
+      <div class="kpi-card"><div class="kpi-val">${fmt(m.g0need)}</div><div class="kpi-lbl">G0 Mini-tubers</div></div>
+      <div class="kpi-card"><div class="kpi-val">${m.msLitres}L</div><div class="kpi-lbl">MS Medium</div></div>
+      <div class="kpi-card"><div class="kpi-val">₹${fmt(m.laborCost)}</div><div class="kpi-lbl">Labour Cost</div></div>
+      <div class="kpi-card"><div class="kpi-val">${fmt(m.glassToBuy)}</div><div class="kpi-lbl">Glassware to Buy</div></div>`;
+    document.getElementById('plan-text').innerHTML=fmtAI(result);
+    const box=document.getElementById('plan-result');
+    box.classList.add('show');
+    box.scrollIntoView({behavior:'smooth',block:'nearest'});
+  }catch(e){alert('Error: '+e.message);}
+  setLoad('plan-btn',false,'🧮 Generate Full Plan');
+}
+
+// ════════════ SCHEDULE ════════════
+async function runSchedule(){
+  const crop=document.getElementById('s-crop').value;
+  const month=document.getElementById('s-month').value;
+  const state=document.getElementById('s-state').value;
+  const qty=document.getElementById('s-qty').value;
+  const gen=document.getElementById('s-gen').value;
+  const tech=document.getElementById('s-tech').value;
+  setLoad('sched-btn',true,'📅 Build Schedule');
+  const sys=`You are a tissue culture production manager in India with 15+ years experience. Give practical week-by-week schedules specific to Indian lab conditions, climate, and regulatory requirements.`;
+  const prompt=`Week-by-week production schedule for ${crop} in ${state}.
+Target: ${qty} ${gen} units ready for planting in ${month}.
+Technicians: ${tech} | Work backwards from planting month.
+Include: exact week tasks, responsible roles, CPRI/IMSCS certification milestones, virus indexing weeks, climate notes for Punjab/Indian conditions, procurement deadlines for media chemicals and glassware, polyhouse prep timeline.
+Format as: WEEK X | TASK | WHO | MILESTONE FLAG`;
+  try{
+    const r=await claude([{role:'user',content:prompt}],sys,1200);
+    document.getElementById('sched-text').innerHTML=fmtAI(r);
+    const box=document.getElementById('sched-result');
+    box.classList.add('show');
+    box.scrollIntoView({behavior:'smooth',block:'nearest'});
+  }catch(e){alert('Error: '+e.message);}
+  setLoad('sched-btn',false,'📅 Build Schedule');
+}
+
+// ════════════ DISEASE ID ════════════
+function previewImg(inp){
+  if(!inp.files||!inp.files[0])return;
+  const r=new FileReader();
+  r.onload=(e)=>{
+    const img=document.getElementById('prev-img');
+    img.src=e.target.result;img.style.display='block';
+    imgB64=e.target.result.split(',')[1];
+    document.getElementById('upload-zone').style.borderColor='var(--green)';
+  };
+  r.readAsDataURL(inp.files[0]);
+}
+async function runDisease(){
+  const crop=document.getElementById('d-crop').value;
+  const stage=document.getElementById('d-stage').value;
+  const sym=document.getElementById('d-sym').value;
+  const sys=`You are an expert plant pathologist and tissue culture specialist in India. Diagnose precisely. Structure exactly as:
+1) MOST LIKELY DIAGNOSIS (confidence %)
+2) ALTERNATIVE DIAGNOSES
+3) IMMEDIATE ACTION (today)
+4) TREATMENT PROTOCOL (Indian product names + doses)
+5) PREVENTION for future batches
+Be practical for Indian conditions and available agrochemicals.`;
+  let msgs;
+  if(imgB64){
+    msgs=[{role:'user',content:[
+      {type:'image',source:{type:'base64',media_type:'image/jpeg',data:imgB64}},
+      {type:'text',text:`${crop} at ${stage}. Symptoms: ${sym||'see image'}. Diagnose and give full Indian treatment protocol.`}
+    ]}];
+  } else {
+    if(!sym){alert('Upload a photo or describe symptoms to proceed.');return;}
+    msgs=[{role:'user',content:`${crop} at ${stage}. Symptoms: ${sym}. Diagnose and give complete treatment.`}];
+  }
+  setLoad('dis-btn',true,'🔬 Identify & Diagnose');
+  try{
+    const r=await claude(msgs,sys);
+    document.getElementById('dis-text').innerHTML=fmtAI(r);
+    const box=document.getElementById('dis-result');
+    box.classList.add('show');
+    box.scrollIntoView({behavior:'smooth',block:'nearest'});
+  }catch(e){alert('Error: '+e.message);}
+  setLoad('dis-btn',false,'🔬 Identify & Diagnose');
+}
+
+// ════════════ CHAT ════════════
+const CHAT_SYS=`You are an expert AI assistant for tissue culture labs in India. Deep knowledge of: MS/WPM/B5 media, PGRs (BAP, IAA, IBA, NAA, 2,4-D, kinetin, zeatin), contamination control, acclimatization protocols, seed potato G0–G4 generation scheme, CPRI/ICAR standards, IMSCS certification, NCS-TCP certification, banana/sugarcane/strawberry TC, common diseases and pests, sterilization protocols (autoclaving, filter sterilization). Answer practically for Indian lab conditions. Use Indian number format. Keep answers focused.`;
+
+async function sendChat(){
+  const inp=document.getElementById('chat-inp');
+  const txt=inp.value.trim();if(!txt)return;
+  const hist=document.getElementById('chat-hist');
+  const empty=hist.querySelector('.empty-chat');if(empty)empty.remove();
+  const ud=document.createElement('div');ud.className='msg user';ud.textContent=txt;
+  hist.appendChild(ud);
+  chatMsgs.push({role:'user',content:txt});
+  inp.value='';inp.disabled=true;
+  document.getElementById('chat-btn').disabled=true;
+  const td=document.createElement('div');td.className='msg ai';
+  td.innerHTML='<span class="spin" style="border-top-color:var(--green);border-color:var(--border2)"></span> thinking...';
+  hist.appendChild(td);hist.scrollTop=hist.scrollHeight;
+  try{
+    const r=await claude(chatMsgs.slice(-10),CHAT_SYS);
+    chatMsgs.push({role:'assistant',content:r});
+    td.innerHTML=fmtAI(r);
+  }catch(e){td.textContent='Error: '+e.message;}
+  inp.disabled=false;
+  document.getElementById('chat-btn').disabled=false;
+  inp.focus();hist.scrollTop=hist.scrollHeight;
+}
+
+// ════════════ AUDIT LOG ════════════
+function addLog(){
+  const tbody=document.getElementById('log-body');
+  const date=new Date().toLocaleDateString('en-IN',{month:'short',year:'numeric'});
+  const tr=document.createElement('tr');
+  tr.innerHTML=`
+    <td>${date}</td>
+    <td><input style="border:none;border-bottom:1px solid var(--border2);background:transparent;width:100%;font-size:12px;color:var(--ink);outline:none;" placeholder="Describe test..." /></td>
+    <td><input style="border:none;border-bottom:1px solid var(--border2);background:transparent;width:100%;font-size:12px;color:var(--ink);outline:none;" placeholder="Expected value" /></td>
+    <td><input style="border:none;border-bottom:1px solid var(--border2);background:transparent;width:100%;font-size:12px;color:var(--ink);outline:none;" placeholder="AI output" /></td>
+    <td><input style="border:none;border-bottom:1px solid var(--border2);background:transparent;width:100%;font-size:12px;color:var(--ink);outline:none;" placeholder="Source (CPRI, manual, etc.)" /></td>
+    <td>
+      <select style="border:1px solid var(--border2);border-radius:4px;font-size:11px;padding:2px 4px;background:var(--card);color:var(--ink);">
+        <option>PENDING</option><option>PASS</option><option>FAIL</option>
+      </select>
+    </td>`;
+  tbody.appendChild(tr);
+  tr.querySelector('input').focus();
+}
+
+// ════════════ PARAMS ════════════
+function populateParams(){
+  const m={contam:'c-contam',sub:'c-sub',shoots:'c-shoots',rooting:'c-rooting',
+    acclimat:'c-acclimat',cuts:'c-cuts',jar:'c-jar',tube:'c-tube',bottle:'c-bottle',
+    mediaML:'c-media-ml',reuse:'c-reuse',minV:'c-min-v',hrs:'c-hrs',wage:'c-wage',
+    vpd:'c-vpd',g0g1:'c-g0g1',g1g2:'c-g1g2',fl:'c-fl',g0w:'c-g0w',fsw:'c-fsw',buf:'c-buf'};
+  Object.entries(m).forEach(([k,id])=>{const el=document.getElementById(id);if(el)el.value=P[k];});
+}
+function saveParams(){
+  const m={contam:'c-contam',sub:'c-sub',shoots:'c-shoots',rooting:'c-rooting',
+    acclimat:'c-acclimat',cuts:'c-cuts',jar:'c-jar',tube:'c-tube',bottle:'c-bottle',
+    mediaML:'c-media-ml',reuse:'c-reuse',minV:'c-min-v',hrs:'c-hrs',wage:'c-wage',
+    vpd:'c-vpd',g0g1:'c-g0g1',g1g2:'c-g1g2',fl:'c-fl',g0w:'c-g0w',fsw:'c-fsw',buf:'c-buf'};
+  Object.entries(m).forEach(([k,id])=>{const el=document.getElementById(id);if(el)P[k]=parseFloat(el.value)||0;});
+  const t=document.getElementById('save-toast');t.style.display='inline';
+  setTimeout(()=>t.style.display='none',3000);
+}
+function resetParams(){
+  if(!confirm('Reset all parameters to default values?'))return;
+  P={...DEFAULTS};populateParams();
+}
+</script>
+</body>
+</html>
